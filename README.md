@@ -72,4 +72,4 @@ called something like:
 
 This folder contains package metadata used internally by Python (file lists,
 version information, etc.). It is generated automatically and should not be
-edited. You can safely ignore it during the mock-practical.
+edited.
