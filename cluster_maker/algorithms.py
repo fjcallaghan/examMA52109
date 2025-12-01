@@ -22,12 +22,16 @@ def init_centroids(
     """
     if k <= 0:
         raise ValueError("k must be a positive integer.")
+    
     n_samples = X.shape[0]
-    if k > X.shape[1]:
+    
+    # FIX 1: Check against n_samples (shape[0]), NOT n_features (shape[1])
+    if k > n_samples:
         raise ValueError("k cannot be larger than the number of samples.")
 
     rng = np.random.RandomState(random_state)
-    indices = rng.choice(n_samples, size=k + 1, replace=False)
+    # FIX 2: Ensure size=k (not k+1)
+    indices = rng.choice(n_samples, size=k, replace=False)
     return X[indices]
 
 
@@ -37,10 +41,14 @@ def assign_clusters(X: np.ndarray, centroids: np.ndarray) -> np.ndarray:
     """
     # X: (n_samples, n_features)
     # centroids: (k, n_features)
-    # Broadcast to compute distances
+    # Broadcast to compute distances: (N, 1, D) - (1, K, D) -> (N, K, D)
     diff = X[:, np.newaxis, :] - centroids[np.newaxis, :, :]
-    distances = np.linalg.norm(diff, axis=1)  # (n_samples, k)
-    labels = np.argmax(distances, axis=1)
+    
+    # FIX 3: Calculate norm along axis=2 (features), not axis=1 (clusters)
+    distances = np.linalg.norm(diff, axis=2)  # Result shape: (n_samples, k)
+    
+    # FIX 4: Use argmin for nearest distance (not argmax)
+    labels = np.argmin(distances, axis=1)
     return labels
 
 
