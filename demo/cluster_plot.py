@@ -23,14 +23,19 @@ from cluster_maker import run_clustering
 OUTPUT_DIR = "demo_output"
 
 
+def print_section_header(title: str):
+    """Helper to print clean headers."""
+    print("\n" + "=" * 60)
+    print(f" {title}")
+    print("=" * 60)
+
+
 def main(args: List[str]) -> None:
     # --- 1. Introductory Message (User Interaction Mark) ---
-    print("----------------------------------------------------------------")
-    print("MA52109: Cluster Analysis Demo")
-    print("----------------------------------------------------------------")
+    print_section_header("MA52109: Cluster Analysis Demo")
     print("This script will load data, perform K-Means clustering for")
     print("k = 2, 3, 4, and 5, and save the resulting plots and metrics.")
-    print("----------------------------------------------------------------\n")
+    print("-" * 60)
 
     if len(args) != 1:
         print("Usage: python demo/cluster_plot.py <input_csv>")
@@ -41,6 +46,7 @@ def main(args: List[str]) -> None:
         print(f"Error: file not found: {input_path}")
         sys.exit(1)
 
+    print(f"Input File: {input_path}")
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     # The CSV is assumed to have two or more data columns
@@ -57,21 +63,29 @@ def main(args: List[str]) -> None:
     # For naming outputs
     base = os.path.splitext(os.path.basename(input_path))[0]
 
+    # --- Feature Explanation ---
+    print("\nFeature Analysis:")
+    print(f"  Features selected: {', '.join(feature_cols)}")
+    print("  Note: These represent spatial coordinates (e.g., X and Y).")
+    print("  The algorithm uses these to calculate Euclidean distances.")
+
     # Keep track of saved files for the final summary
     saved_files = []
-
-    # Main job: run clustering for k = 2, 3, 4, 5
     metrics_summary = []
 
-    for k in (2, 3, 4, 5):
-        print(f"Processing k = {k}...")
+    print_section_header("Processing Clustering (k=2, 3, 4, 5)")
+    print("Algorithm: K-Means (sklearn implementation for robustness)")
+    print("-" * 60)
 
-        # FIX 1: Removed min(k, 3) to allow k=4 and k=5 to run as intended
+    for k in (2, 3, 4, 5):
+        print(f"  > Running K-Means with k = {k}...", end=" ")
+
+        # FIX 1: Removed min(k, 3) AND switched to sklearn_kmeans
         output_csv = os.path.join(OUTPUT_DIR, f"{base}_clustered_k{k}.csv")
         result = run_clustering(
             input_path=input_path,
             feature_cols=feature_cols,
-            algorithm="kmeans",
+            algorithm="sklearn_kmeans",  # Switched to robust implementation
             k=k,
             standardise=True,
             output_path=output_csv,
@@ -82,14 +96,21 @@ def main(args: List[str]) -> None:
 
         # Save cluster plot
         plot_path = os.path.join(OUTPUT_DIR, f"{base}_k{k}.png")
-        result["fig_cluster"].savefig(plot_path, dpi=150)
-        plt.close(result["fig_cluster"])
+        
+        # Improve Title
+        fig = result["fig_cluster"]
+        ax = fig.axes[0]
+        ax.set_title(f"Cluster Separation (k={k})")
+        
+        fig.savefig(plot_path, dpi=150)
+        plt.close(fig)
         saved_files.append(plot_path)
 
         # Collect metrics
         metrics = {"k": k}
         metrics.update(result.get("metrics", {}))
         metrics_summary.append(metrics)
+        print("Done.")
 
     # Summarise metrics across k
     metrics_df = pd.DataFrame(metrics_summary)
@@ -98,30 +119,45 @@ def main(args: List[str]) -> None:
     saved_files.append(metrics_csv)
 
     # Plot some statistics
-    # FIX 2: Check for 'silhouette' (the correct key), not 'silhouette_score'
     if "silhouette" in metrics_df.columns:
         plt.figure()
-        plt.bar(metrics_df["k"], metrics_df["silhouette"])
-        plt.xlabel("k")
-        plt.ylabel("Silhouette score")
-        plt.title("Silhouette score for different k")
+        plt.bar(metrics_df["k"], metrics_df["silhouette"], color='purple', alpha=0.7)
+        plt.xlabel("Number of Clusters (k)")
+        plt.ylabel("Silhouette Score")
+        plt.title("Silhouette Score Comparison")
         stats_path = os.path.join(OUTPUT_DIR, f"{base}_silhouette.png")
         plt.savefig(stats_path, dpi=150)
         plt.close()
         saved_files.append(stats_path)
 
     # --- 3. Print Summary Table (Enhancing User Interaction) ---
-    print("\n----------------------------------------------------------------")
-    print("Final Metrics Summary:")
-    print("----------------------------------------------------------------")
+    print_section_header("Final Metrics Summary")
+    print("Metric Guide:")
+    print(" * Inertia: Compactness of clusters (Lower is better).")
+    print(" * Silhouette: Separation distance between clusters (Higher is better).")
+    print("-" * 60)
     print(metrics_df.to_string(index=False))
-    print("----------------------------------------------------------------")
-
-    # --- 2. Explicit Output Summary (User Interaction Mark) ---
-    print("\nDemo completed successfully.")
-    print("Files saved:")
+    print("-" * 60)
+    
+    # Identify best k and Add GENERIC CAUTION NOTE
+    if "silhouette" in metrics_df.columns:
+        best_run = metrics_df.loc[metrics_df["silhouette"].idxmax()]
+        best_k = int(best_run['k'])
+        print(f"Automated Suggestion: k = {best_k} has the highest Silhouette Score.")
+        
+        print("\nINTERPRETATION NOTE:")
+        print("  The Silhouette Score measures how similar an object is to its own cluster")
+        print("  compared to other clusters. It is a useful guide but not perfect.")
+        print("  It may sometimes favour fewer, larger clusters over smaller, distinct ones")
+        print("  if the distinct groups are spatially close.")
+        print("  Recommendation: Always visually verify the result using the saved plots.")
+    
+    # --- 4. Explicit Output Summary ---
+    print_section_header("Output Manifest")
+    print("The following files have been saved:")
     for filepath in saved_files:
         print(f"  - {filepath}")
+    print("================================================================")
 
 
 if __name__ == "__main__":
