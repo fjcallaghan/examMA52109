@@ -3,16 +3,7 @@ cluster_maker
 
 An educational Python package for generating synthetic clustered data,
 running clustering algorithms, evaluating results, and producing
-user-friendly plots. Designed for practicals and exams where students
-work with an incomplete or faulty version of the package and must fix it.
-
-Allowed libraries:
-- Python standard library
-- numpy
-- pandas
-- matplotlib
-- scipy
-- scikit-learn
+user-friendly plots.
 """
 
 # --- Data generation & basic analysis ---
@@ -31,6 +22,9 @@ from .algorithms import (
     assign_clusters,
     update_centroids,
 )
+
+# --- NEW: Agglomerative Clustering ---
+from .agglomerative import fit_agglomerative
 
 # --- Evaluation ---
 from .evaluation import (
@@ -69,6 +63,9 @@ __all__ = [
     "init_centroids",
     "assign_clusters",
     "update_centroids",
+    
+    # NEW
+    "fit_agglomerative",
 
     # Evaluation
     "compute_inertia",
